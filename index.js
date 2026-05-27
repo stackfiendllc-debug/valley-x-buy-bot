@@ -5,41 +5,64 @@ import TelegramBot from 'node-telegram-bot-api';
 const app = express();
 app.use(express.json());
 
-const PORT = process.env.PORT || 3000;
-
 // =========================
-// SERVER
-// =========================
-app.get('/', (req, res) => {
-  res.json({
-    status: 'online',
-    message: 'Valley X Buy Bot Active 🚀'
-  });
-});
-
-// =========================
-// BOT SETUP
+// ENV CHECK
 // =========================
 const token = process.env.BOT_TOKEN;
 
 if (!token) {
-  console.error('Missing BOT_TOKEN');
+  console.error('❌ BOT_TOKEN missing');
   process.exit(1);
 }
 
+// =========================
+// BOT INIT
+// =========================
 const bot = new TelegramBot(token, { polling: true });
 
-console.log('🤖 Bot is live and listening...');
+console.log('🤖 Valley X Buy Bot Online');
 
 // =========================
-// COMMANDS
+// SIMPLE MEMORY STORE (temporary DB)
+// =========================
+const users = {};
+const orders = [];
+
+// =========================
+// EXPRESS SERVER
+// =========================
+app.get('/', (req, res) => {
+  res.json({
+    status: 'online',
+    bot: 'active',
+    users: Object.keys(users).length,
+    orders: orders.length
+  });
+});
+
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log(`🌐 Server running on port ${PORT}`);
+});
+
+// =========================
+// BOT COMMANDS
 // =========================
 
 // /start
 bot.onText(/\/start/, (msg) => {
+  const chatId = msg.chat.id;
+
+  users[chatId] = {
+    id: chatId,
+    username: msg.from.username || 'unknown',
+    joined: new Date()
+  };
+
   bot.sendMessage(
-    msg.chat.id,
-    `Welcome 🔥\n\nValley X Buy Bot is active.\nUse /help to see commands.`
+    chatId,
+    `🔥 Welcome to Valley X Buy Bot\n\nUse /help to see commands.`
   );
 });
 
@@ -47,7 +70,12 @@ bot.onText(/\/start/, (msg) => {
 bot.onText(/\/help/, (msg) => {
   bot.sendMessage(
     msg.chat.id,
-    `Commands List:\n\n/start - Start bot\n/help - Commands\n/status - Check bot status`
+`📌 COMMANDS:
+
+/start - Start bot
+/help - Commands list
+/status - Bot status
+/buy <item> - Create order`
   );
 });
 
@@ -55,7 +83,36 @@ bot.onText(/\/help/, (msg) => {
 bot.onText(/\/status/, (msg) => {
   bot.sendMessage(
     msg.chat.id,
-    `✅ Bot is running normally on Render\nServer is active 🚀`
+`✅ SYSTEM ONLINE
+
+Users: ${Object.keys(users).length}
+Orders: ${orders.length}
+Server: Running on Render 🚀`
+  );
+});
+
+// /buy command
+bot.onText(/\/buy (.+)/, (msg, match) => {
+  const chatId = msg.chat.id;
+  const item = match[1];
+
+  const order = {
+    id: orders.length + 1,
+    user: chatId,
+    item,
+    status: 'pending',
+    time: new Date()
+  };
+
+  orders.push(order);
+
+  bot.sendMessage(
+    chatId,
+`🛒 ORDER CREATED
+
+Item: ${item}
+Order ID: #${order.id}
+Status: pending`
   );
 });
 
@@ -63,14 +120,7 @@ bot.onText(/\/status/, (msg) => {
 bot.on('message', (msg) => {
   const text = msg.text;
 
-  if (text.startsWith('/')) return; // ignore commands
+  if (!text || text.startsWith('/')) return;
 
-  bot.sendMessage(msg.chat.id, `I received: "${text}"`);
-});
-
-// =========================
-// START SERVER
-// =========================
-app.listen(PORT, () => {
-  console.log(`🌐 Server running on port ${PORT}`);
+  bot.sendMessage(msg.chat.id, `⚡ I got your message: "${text}"`);
 });
