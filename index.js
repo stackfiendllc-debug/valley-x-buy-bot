@@ -8,38 +8,68 @@ app.use(express.json());
 const PORT = process.env.PORT || 3000;
 
 // =========================
-// 1. EXPRESS SERVER (Render)
+// SERVER
 // =========================
 app.get('/', (req, res) => {
   res.json({
     status: 'online',
-    message: 'Bot + Server running 🚀'
+    message: 'Valley X Buy Bot Active 🚀'
   });
 });
 
 // =========================
-// 2. TELEGRAM BOT SETUP
+// BOT SETUP
 // =========================
 const token = process.env.BOT_TOKEN;
 
 if (!token) {
-  console.error('❌ BOT_TOKEN missing in environment variables');
+  console.error('Missing BOT_TOKEN');
   process.exit(1);
 }
 
-// polling mode (simpler for Render free tier)
 const bot = new TelegramBot(token, { polling: true });
 
-bot.on('message', (msg) => {
-  const chatId = msg.chat.id;
-
-  bot.sendMessage(chatId, 'Bot is connected and running on server 🚀');
-});
-
-console.log('🤖 Bot started successfully');
+console.log('🤖 Bot is live and listening...');
 
 // =========================
-// 3. START SERVER
+// COMMANDS
+// =========================
+
+// /start
+bot.onText(/\/start/, (msg) => {
+  bot.sendMessage(
+    msg.chat.id,
+    `Welcome 🔥\n\nValley X Buy Bot is active.\nUse /help to see commands.`
+  );
+});
+
+// /help
+bot.onText(/\/help/, (msg) => {
+  bot.sendMessage(
+    msg.chat.id,
+    `Commands List:\n\n/start - Start bot\n/help - Commands\n/status - Check bot status`
+  );
+});
+
+// /status
+bot.onText(/\/status/, (msg) => {
+  bot.sendMessage(
+    msg.chat.id,
+    `✅ Bot is running normally on Render\nServer is active 🚀`
+  );
+});
+
+// fallback message handler
+bot.on('message', (msg) => {
+  const text = msg.text;
+
+  if (text.startsWith('/')) return; // ignore commands
+
+  bot.sendMessage(msg.chat.id, `I received: "${text}"`);
+});
+
+// =========================
+// START SERVER
 // =========================
 app.listen(PORT, () => {
   console.log(`🌐 Server running on port ${PORT}`);
