@@ -1,26 +1,46 @@
 import 'dotenv/config';
 import express from 'express';
+import TelegramBot from 'node-telegram-bot-api';
 
 const app = express();
-
-// Middleware (safe default for APIs/bots)
 app.use(express.json());
 
-// Health check route (Render needs this for uptime checks)
+const PORT = process.env.PORT || 3000;
+
+// =========================
+// 1. EXPRESS SERVER (Render)
+// =========================
 app.get('/', (req, res) => {
-  res.status(200).json({
+  res.json({
     status: 'online',
-    message: 'Valley X Buy Bot is running 🚀'
+    message: 'Bot + Server running 🚀'
   });
 });
 
-// Example environment variable check (optional but useful)
-console.log('Bot starting...');
-console.log('Environment loaded:', process.env.NODE_ENV || 'development');
+// =========================
+// 2. TELEGRAM BOT SETUP
+// =========================
+const token = process.env.BOT_TOKEN;
 
-// Start server
-const PORT = process.env.PORT || 3000;
+if (!token) {
+  console.error('❌ BOT_TOKEN missing in environment variables');
+  process.exit(1);
+}
 
+// polling mode (simpler for Render free tier)
+const bot = new TelegramBot(token, { polling: true });
+
+bot.on('message', (msg) => {
+  const chatId = msg.chat.id;
+
+  bot.sendMessage(chatId, 'Bot is connected and running on server 🚀');
+});
+
+console.log('🤖 Bot started successfully');
+
+// =========================
+// 3. START SERVER
+// =========================
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`🌐 Server running on port ${PORT}`);
 });
