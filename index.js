@@ -7,15 +7,25 @@ const CHAT_ID = process.env.CHAT_ID;
 const TOKEN_MINT = process.env.TOKEN_MINT;
 const RPC_URL = process.env.RPC_URL;
 
-let seen = new Set();
+// safety checks (prevents Render silent crash)
+if (!BOT_TOKEN || !CHAT_ID || !TOKEN_MINT || !RPC_URL) {
+  console.log("❌ Missing environment variables");
+  process.exit(1);
+}
 
 async function sendTelegram(text) {
-  await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-    chat_id: CHAT_ID,
-    text,
-    parse_mode: "HTML"
-  });
+  try {
+    await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      chat_id: CHAT_ID,
+      text,
+      parse_mode: "HTML"
+    });
+  } catch (err) {
+    console.log("Telegram error:", err.message);
+  }
 }
+
+let seen = new Set();
 
 async function check() {
   try {
@@ -23,30 +33,34 @@ async function check() {
       jsonrpc: "2.0",
       id: 1,
       method: "getSignaturesForAddress",
-      params: [TOKEN_MINT, { limit: 10 }]
+      params: [TOKEN_MINT, { limit: 5 }]
     });
 
-    const txs = res.data.result;
+    const txs = res.data.result || [];
 
     for (let tx of txs) {
       if (seen.has(tx.signature)) continue;
       seen.add(tx.signature);
 
       await sendTelegram(`
-🚨 NEW ACTIVITY
+🚨 <b>NEW ACTIVITY DETECTED</b>
 
 Token: ${TOKEN_MINT}
-Signature: ${tx.signature}
-Time: ${new Date(tx.blockTime * 1000).toLocaleString()}
+Signature: <code>${tx.signature}</code>
 
-Check explorer for buy/sell details.
+Time: ${tx.blockTime ? new Date(tx.blockTime * 1000).toLocaleString() : "N/A"}
       `);
     }
-  } catch (e) {
-    console.log(e.message);
+
+  } catch (err) {
+    console.log("RPC error:", err.message);
   }
 }
 
+// keep bot alive (IMPORTANT for Render)
 setInterval(check, 15000);
 
-console.log("Bot running...");
+// initial run
+check();
+
+console.log("✅ Buy bot running...");
