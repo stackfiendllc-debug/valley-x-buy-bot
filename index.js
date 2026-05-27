@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import express from 'express';
 import TelegramBot from 'node-telegram-bot-api';
 
@@ -6,12 +5,12 @@ const app = express();
 app.use(express.json());
 
 // =========================
-// ENV CHECK
+// ENV (Render provides this automatically)
 // =========================
 const token = process.env.BOT_TOKEN;
 
 if (!token) {
-  console.error('❌ BOT_TOKEN missing');
+  console.error('❌ BOT_TOKEN missing in Render environment variables');
   process.exit(1);
 }
 
@@ -20,10 +19,10 @@ if (!token) {
 // =========================
 const bot = new TelegramBot(token, { polling: true });
 
-console.log('🤖 Valley X Buy Bot Online');
+console.log('🤖 Bot is online and running...');
 
 // =========================
-// SIMPLE MEMORY STORE (temporary DB)
+// SIMPLE MEMORY (temporary storage)
 // =========================
 const users = {};
 const orders = [];
@@ -34,7 +33,7 @@ const orders = [];
 app.get('/', (req, res) => {
   res.json({
     status: 'online',
-    bot: 'active',
+    bot: true,
     users: Object.keys(users).length,
     orders: orders.length
   });
@@ -47,10 +46,10 @@ app.listen(PORT, () => {
 });
 
 // =========================
-// BOT COMMANDS
+// COMMANDS
 // =========================
 
-// /start
+// START
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
 
@@ -62,36 +61,34 @@ bot.onText(/\/start/, (msg) => {
 
   bot.sendMessage(
     chatId,
-    `🔥 Welcome to Valley X Buy Bot\n\nUse /help to see commands.`
+    `🔥 Welcome to Valley X Buy Bot\n\nType /help to see commands.`
   );
 });
 
-// /help
+// HELP
 bot.onText(/\/help/, (msg) => {
   bot.sendMessage(
     msg.chat.id,
 `📌 COMMANDS:
-
 /start - Start bot
-/help - Commands list
+/help - Help menu
 /status - Bot status
 /buy <item> - Create order`
   );
 });
 
-// /status
+// STATUS
 bot.onText(/\/status/, (msg) => {
   bot.sendMessage(
     msg.chat.id,
-`✅ SYSTEM ONLINE
-
+`✅ BOT STATUS: ONLINE
 Users: ${Object.keys(users).length}
 Orders: ${orders.length}
 Server: Running on Render 🚀`
   );
 });
 
-// /buy command
+// BUY COMMAND
 bot.onText(/\/buy (.+)/, (msg, match) => {
   const chatId = msg.chat.id;
   const item = match[1];
@@ -109,18 +106,17 @@ bot.onText(/\/buy (.+)/, (msg, match) => {
   bot.sendMessage(
     chatId,
 `🛒 ORDER CREATED
-
 Item: ${item}
 Order ID: #${order.id}
 Status: pending`
   );
 });
 
-// fallback message handler
+// FALLBACK MESSAGE HANDLER
 bot.on('message', (msg) => {
   const text = msg.text;
 
   if (!text || text.startsWith('/')) return;
 
-  bot.sendMessage(msg.chat.id, `⚡ I got your message: "${text}"`);
+  bot.sendMessage(msg.chat.id, `Received: "${text}"`);
 });
